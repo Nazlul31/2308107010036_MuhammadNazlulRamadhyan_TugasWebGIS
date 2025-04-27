@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peta Kecamatan Aceh Besar</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    #map { height: 90vh; }
+    #controls {
+      padding: 10px;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    select {
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      min-width: 200px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  <label for="kecamatanSelect"><b>Pilih Kecamatan:</b></label>
+  <select id="kecamatanSelect">
+    <option value="">-- Pilih Kecamatan --</option>
+  </select>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  // Inisialisasi peta
+  var map = L.map('map').setView([5.45, 95.4], 10);
+
+  // Tambahkan tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Fungsi buat warna random
+  function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
+  let kecamatanLayers = {}; // Menyimpan layer per kecamatan
+
+  // Load GeoJSON Aceh Besar
+  fetch('Kec_AcehBesar.geojson')
+    .then(response => response.json())
+    .then(data => {
+      const layerGroup = L.geoJSON(data, {
+        style: function (feature) {
+          return {
+            color: '#000', // Garis batas hitam
+            weight: 2,
+            fillColor: getRandomColor(), // Warna isi random
+            fillOpacity: 0.5
+          };
+        },
+        onEachFeature: function (feature, layer) {
+          const namaKecamatan = feature.properties.name; // Ganti ke 'name'
+          if (namaKecamatan) {
+            layer.bindPopup(`<b>${namaKecamatan}</b>`);
+            
+            // Tambahkan ke dropdown
+            const select = document.getElementById('kecamatanSelect');
+            const option = document.createElement('option');
+            option.value = namaKecamatan;
+            option.text = namaKecamatan;
+            select.appendChild(option);
+            
+            // Simpan layer berdasarkan nama kecamatan
+            kecamatanLayers[namaKecamatan] = layer;
+          }
+        }
+      }).addTo(map);
+    })
+    .catch(error => console.error('Gagal memuat GeoJSON:', error));
+
+  // Event saat dropdown berubah
+  document.getElementById('kecamatanSelect').addEventListener('change', function() {
+    const selected = this.value;
+    if (selected && kecamatanLayers[selected]) {
+      const layer = kecamatanLayers[selected];
+      map.fitBounds(layer.getBounds());
+      layer.openPopup();
+    }
+  });
+</script>
+
+</body>
+</html>
